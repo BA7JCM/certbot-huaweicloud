@@ -1,4 +1,5 @@
-set shell := ["powershell.exe", "-c"]
+# windows need to set shell
+# set shell := ["powershell.exe", "-c"]
 
 build:
 	go build -o ./bin/ ./...

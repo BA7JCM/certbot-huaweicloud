@@ -76,12 +76,11 @@ use 参数为 cleanup 时，删除recordSet。
 ## 自动续期
 
 ```bash
-certbot certonly --manual \
---manual-auth-hook /path/to/project/bin/certbot.exe -use auth \
---manual-cleanup-hook /path/to/project/bin/certbot.exe -use cleanup \
--d secure.example.com
+certbot renew --manual --preferred-challenges=dns \
+--manual-auth-hook /path/to/project/bin/certbot -use auth \
+--manual-cleanup-hook /path/to/project/bin/certbot -use cleanup \
+--deploy-hook "sudo nginx -s reload"
 ```
 
-`/path/to/project/bin/certbot.exe`为你编译生成的文件路径。
-
-`secure.example.com`为你申请证书的域名。
+- `/path/to/project/bin/certbot` 为你编译生成的文件路径。
+- `sudo nginx -s reload` 用于重新加载配置nginx配置。
