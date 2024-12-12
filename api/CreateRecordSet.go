@@ -32,6 +32,9 @@ func CreateRecordSet(client *dnsM.DnsClient, zoneId string, certbotValidation st
 		Name:        certbotDomain,
 	}
 	response, err := client.CreateRecordSet(request)
+	if err != nil {
+		return "", err
+	}
 	if mode := viper.GetString("MODE"); mode == "DEBUG" {
 		fmt.Printf("%+v\n", response)
 	}

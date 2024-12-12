@@ -3,8 +3,10 @@ package main
 import (
 	"certbot/api"
 	"certbot/config"
+	"flag"
 	"fmt"
-	"time"
+	"io"
+	"os"
 
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
 	dnsM "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2"
@@ -53,29 +55,31 @@ func main() {
 		panic("zone id not found")
 	}
 
-	mode := viper.GetString("MODE")
-	if mode == "DEBUG" {
-		// 创建recordSet
-		certbotValidation := viper.GetString("CERTBOT_VALIDATION")
-		certbotDomain := viper.GetString("CERTBOT_DOMAIN")
-		description := viper.GetString("DESCRIPTION")
+	var use string
+	flag.StringVar(&use, "use", "", "use")
+	flag.Parse()
+
+	switch use {
+	case "auth": // 创建recordSet
+		certbotValidation, certbotDomain, description := loadParams()
 		recordSetId, err := api.CreateRecordSet(client, zoneId, certbotValidation, certbotDomain, description)
 		if err != nil {
 			fmt.Println("create record set error")
 			panic(err)
 		}
+		saveRecordSetId(recordSetId)
 
-		fmt.Println("recordSetId", recordSetId)
-		time.Sleep(10 * time.Second)
-
-		// 删除recordSet
-		err = api.DeleteRecordSet(client, zoneId, recordSetId)
+	case "cleanup": // 删除recordSet
+		recordSetId := loadRecordSetId()
+		err := api.DeleteRecordSet(client, zoneId, recordSetId)
 		if err != nil {
 			fmt.Println("delete record set error")
 			panic(err)
 		}
-	} else if mode == "DEV" {
-		//TODO
+
+	default:
+		fmt.Println("use param error. use auth or cleanup")
+		panic("use param error")
 	}
 }
 
@@ -91,4 +95,46 @@ func getZoneId(client *dnsM.DnsClient, domain string) string {
 		}
 	}
 	return ""
+}
+
+func loadParams() (certbotValidation, certbotDomain, description string) {
+	mode := viper.GetString("MODE")
+	description = viper.GetString("DESCRIPTION")
+	if mode == "DEBUG" {
+		certbotValidation = viper.GetString("CERTBOT_VALIDATION")
+		certbotDomain = viper.GetString("CERTBOT_DOMAIN")
+	} else if mode == "DEV" {
+		certbotValidation = os.Getenv("CERTBOT_VALIDATION")
+		certbotDomain = os.Getenv("CERTBOT_DOMAIN")
+	} else {
+		fmt.Println("mode error. mode must be DEBUG or DEV")
+		panic("mode error")
+	}
+	return certbotValidation, certbotDomain, description
+}
+
+func saveRecordSetId(recordSetId string) {
+	file, err := os.Create("recordSetId.txt")
+	if err != nil {
+		fmt.Println("save record set id error")
+		panic(err)
+	}
+	file.WriteString(recordSetId)
+	file.Close()
+}
+
+func loadRecordSetId() string {
+	file, err := os.Open("recordSetId.txt")
+	if err != nil {
+		fmt.Println("load record set id error")
+		panic(err)
+	}
+	recordSetId, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Println("load record set id error")
+		panic(err)
+	}
+	file.Close()
+	os.Remove("recordSetId.txt")
+	return string(recordSetId)
 }
