@@ -2,6 +2,10 @@
 
 certbot-huaweicloud
 
+**服务器迁移到1Panel。此项目不再维护。**
+
+---
+
 ## 参考
 
 [华为云开发者 Go 软件开发工具包（Go SDK）](https://console.huaweicloud.com/apiexplorer/#/sdkcenter/DNS?lang=Go)
@@ -82,5 +86,7 @@ certbot renew --manual --preferred-challenges=dns \
 --deploy-hook "sudo nginx -s reload"
 ```
 
-- `/path/to/project/bin/certbot` 为你编译生成的文件路径。
+- `/path/to/project/bin/certbot` 为你编译生成的程序路径。
 - `sudo nginx -s reload` 用于重新加载配置nginx配置。
+
+编辑生成的程序需要读取配置文件。cd到项目目录或者将配置文件`.env`放到程序同一目录再执行上述命令。
