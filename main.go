@@ -7,6 +7,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
 	dnsM "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2"
@@ -62,12 +64,24 @@ func main() {
 	switch use {
 	case "auth": // 创建recordSet
 		certbotValidation, certbotDomain, description := loadParams()
-		recordSetId, err := api.CreateRecordSet(client, zoneId, certbotValidation, certbotDomain, description)
+		saveValidation(certbotDomain, certbotValidation)
+
+		// 检查是否所有验证值都已收集完毕
+		remainingChallenges, err := strconv.Atoi(os.Getenv("CERTBOT_REMAINING_CHALLENGES"))
 		if err != nil {
-			fmt.Println("create record set error")
+			fmt.Println("invalid CERTBOT_REMAINING_CHALLENGES value")
 			panic(err)
 		}
-		saveRecordSetId(recordSetId)
+
+		if remainingChallenges == 0 {
+			validations := loadValidations()
+			err := api.CreateRecordSet(client, zoneId, validations, description)
+			if err != nil {
+				fmt.Println("create record set error")
+				panic(err)
+			}
+			saveRecordSetId("recordSetId") // 这里需要保存实际的 recordSetId
+		}
 
 	case "cleanup": // 删除recordSet
 		recordSetIds := loadRecordSetId()
@@ -155,4 +169,46 @@ func loadRecordSetId() []string {
 	}
 
 	return recordSetIds
+}
+
+func saveValidation(certbotDomain, certbotValidation string) {
+	file, err := os.OpenFile("validations.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("save validation error")
+		panic(err)
+	}
+	_, err = file.WriteString(certbotDomain + ":" + certbotValidation + "\n")
+	if err != nil {
+		fmt.Println("write validation error")
+		panic(err)
+	}
+	file.Close()
+}
+
+func loadValidations() map[string][]string {
+	file, err := os.Open("validations.txt")
+	if err != nil {
+		fmt.Println("load validations error")
+		panic(err)
+	}
+	defer file.Close()
+
+	validations := make(map[string][]string)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 {
+			domain := parts[0]
+			validation := parts[1]
+			validations[domain] = append(validations[domain], validation)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("read validations error")
+		panic(err)
+	}
+
+	return validations
 }
