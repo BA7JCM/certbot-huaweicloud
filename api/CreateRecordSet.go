@@ -30,7 +30,7 @@ func CreateRecordSet(client *dnsM.DnsClient, zoneId string, certbotValidation st
 		Ttl:         &ttlCreateRecordSetRequestBody,
 		Type:        "TXT",
 		Description: &descriptionCreateRecordSetRequestBody,
-		Name:        certbotDomain,
+		Name:        "_acme-challenge." + certbotDomain,
 		Weight:      &weight,
 	}
 	response, err := client.CreateRecordSetWithLine(request)
