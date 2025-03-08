@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"certbot/api"
 	"certbot/config"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
@@ -70,10 +70,18 @@ func main() {
 		saveRecordSetId(recordSetId)
 
 	case "cleanup": // 删除recordSet
-		recordSetId := loadRecordSetId()
-		err := api.DeleteRecordSet(client, zoneId, recordSetId)
+		recordSetIds := loadRecordSetId()
+		for _, recordSetId := range recordSetIds {
+			err := api.DeleteRecordSet(client, zoneId, recordSetId)
+			if err != nil {
+				fmt.Println("delete record set error")
+				panic(err)
+			}
+		}
+		// 删除recordSetId.txt文件
+		err := os.Remove("recordSetId.txt")
 		if err != nil {
-			fmt.Println("delete record set error")
+			fmt.Println("delete recordSetId.txt error")
 			panic(err)
 		}
 
@@ -114,27 +122,37 @@ func loadParams() (certbotValidation, certbotDomain, description string) {
 }
 
 func saveRecordSetId(recordSetId string) {
-	file, err := os.Create("recordSetId.txt")
+	file, err := os.OpenFile("recordSetId.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("save record set id error")
 		panic(err)
 	}
-	file.WriteString(recordSetId)
+	_, err = file.WriteString(recordSetId + "\n")
+	if err != nil {
+		fmt.Println("write record set id error")
+		panic(err)
+	}
 	file.Close()
 }
 
-func loadRecordSetId() string {
+func loadRecordSetId() []string {
 	file, err := os.Open("recordSetId.txt")
 	if err != nil {
 		fmt.Println("load record set id error")
 		panic(err)
 	}
-	recordSetId, err := io.ReadAll(file)
-	if err != nil {
-		fmt.Println("load record set id error")
+	defer file.Close()
+
+	var recordSetIds []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		recordSetIds = append(recordSetIds, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("read record set id error")
 		panic(err)
 	}
-	file.Close()
-	os.Remove("recordSetId.txt")
-	return string(recordSetId)
+
+	return recordSetIds
 }

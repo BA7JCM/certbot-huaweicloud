@@ -9,7 +9,7 @@ import (
 )
 
 func CreateRecordSet(client *dnsM.DnsClient, zoneId string, certbotValidation string, certbotDomain string, description string) (string, error) {
-	request := &model.CreateRecordSetRequest{}
+	request := &model.CreateRecordSetWithLineRequest{}
 	// valueTags := "value1"
 	// var listTagsbody = []model.Tag{
 	// 	{
@@ -17,21 +17,23 @@ func CreateRecordSet(client *dnsM.DnsClient, zoneId string, certbotValidation st
 	// 		Value: &valueTags,
 	// 	},
 	// }
-	var listRecordsbody = []string{
+	listRecordsbody := &[]string{
 		"\"" + certbotValidation + "\"",
 	}
 	ttlCreateRecordSetRequestBody := int32(300)
 	descriptionCreateRecordSetRequestBody := description
 	request.ZoneId = zoneId
-	request.Body = &model.CreateRecordSetRequestBody{
+	weight := int32(1)
+	request.Body = &model.CreateRecordSetWithLineRequestBody{
 		// Tags:        &listTagsbody,
 		Records:     listRecordsbody,
 		Ttl:         &ttlCreateRecordSetRequestBody,
 		Type:        "TXT",
 		Description: &descriptionCreateRecordSetRequestBody,
 		Name:        certbotDomain,
+		Weight:      &weight,
 	}
-	response, err := client.CreateRecordSet(request)
+	response, err := client.CreateRecordSetWithLine(request)
 	if err != nil {
 		return "", err
 	}
