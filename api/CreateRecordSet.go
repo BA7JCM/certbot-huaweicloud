@@ -38,7 +38,7 @@ func CreateRecordSet(client *dnsM.DnsClient, zoneId string, certbotValidation st
 	}
 
 	// 打印 name 字段内容
-	fmt.Println("CreateRecordSetWithLineRequestBody name:", request.Body.Name)
+	// fmt.Println("CreateRecordSetWithLineRequestBody name:", request.Body.Name)
 
 	response, err := client.CreateRecordSetWithLine(request)
 	if err != nil {
