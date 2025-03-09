@@ -83,7 +83,7 @@ func main() {
 		if remainingChallenges == 0 {
 			validations := loadValidations()
 			for domain, validation := range validations {
-				fmt.Println("creating record for domain:", domain, "value:", strings.Join(validation, ","))
+				// fmt.Println("creating record for domain:", domain, "value:", strings.Join(validation, ","))
 				recordSetId, err := api.CreateRecordSet(client, zoneId, strings.Join(validation, ","), domain, description)
 				if err != nil {
 					fmt.Println("create record set error")
