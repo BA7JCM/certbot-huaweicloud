@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
 	dnsM "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2"
@@ -67,7 +68,13 @@ func main() {
 		saveValidation(certbotDomain, certbotValidation)
 
 		// 检查是否所有验证值都已收集完毕
-		remainingChallenges, err := strconv.Atoi(os.Getenv("CERTBOT_REMAINING_CHALLENGES"))
+		remainingChallengesStr := os.Getenv("CERTBOT_REMAINING_CHALLENGES")
+		if remainingChallengesStr == "" {
+			fmt.Println("CERTBOT_REMAINING_CHALLENGES is not set")
+			panic("CERTBOT_REMAINING_CHALLENGES is not set")
+		}
+
+		remainingChallenges, err := strconv.Atoi(remainingChallengesStr)
 		if err != nil {
 			fmt.Println("invalid CERTBOT_REMAINING_CHALLENGES value")
 			panic(err)
@@ -75,15 +82,44 @@ func main() {
 
 		if remainingChallenges == 0 {
 			validations := loadValidations()
-			err := api.CreateRecordSet(client, zoneId, validations, description)
-			if err != nil {
-				fmt.Println("create record set error")
-				panic(err)
+			for domain, validation := range validations {
+				fmt.Println("creating record for domain:", domain, "value:", strings.Join(validation, ","))
+				recordSetId, err := api.CreateRecordSet(client, zoneId, strings.Join(validation, ","), domain, description)
+				if err != nil {
+					fmt.Println("create record set error")
+					panic(err)
+				}
+				fmt.Println("creating record")
+				saveRecordSetId(recordSetId) // 保存实际的 recordSetId
 			}
-			saveRecordSetId("recordSetId") // 这里需要保存实际的 recordSetId
+			// 等一分钟让dns解析生效
+			fmt.Println("wating 1 min for dns")
+			time.Sleep(60 * time.Second)
+			os.Remove("validations.txt") // 删除validations.txt文件
 		}
 
 	case "cleanup": // 删除recordSet
+		remainingChallengesStr := os.Getenv("CERTBOT_REMAINING_CHALLENGES")
+		if remainingChallengesStr == "" {
+			fmt.Println("CERTBOT_REMAINING_CHALLENGES is not set, skipping cleanup")
+			return
+		}
+
+		remainingChallenges, err := strconv.Atoi(remainingChallengesStr)
+		if err != nil {
+			fmt.Println("invalid CERTBOT_REMAINING_CHALLENGES value, skipping cleanup")
+			return
+		}
+
+		if remainingChallenges != 0 {
+			fmt.Println("remaining challenges:", remainingChallenges, "skipping cleanup")
+			return
+		}
+
+		if _, err := os.Stat("recordSetId.txt"); os.IsNotExist(err) {
+			fmt.Println("recordSetId.txt does not exist, skipping cleanup")
+			return
+		}
 		recordSetIds := loadRecordSetId()
 		for _, recordSetId := range recordSetIds {
 			err := api.DeleteRecordSet(client, zoneId, recordSetId)
@@ -93,7 +129,8 @@ func main() {
 			}
 		}
 		// 删除recordSetId.txt文件
-		err := os.Remove("recordSetId.txt")
+		fmt.Println("delete recordSetId.txt")
+		err = os.Remove("recordSetId.txt")
 		if err != nil {
 			fmt.Println("delete recordSetId.txt error")
 			panic(err)
