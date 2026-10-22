@@ -1,9 +1,5 @@
 # certbot 华为云自动续期
 
-certbot-huaweicloud
-
-**服务器迁移到1Panel。此项目不再维护。**
-
 ---
 
 ## 参考
