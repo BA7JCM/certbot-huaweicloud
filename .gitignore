@@ -8,7 +8,7 @@
 *.so
 *.dylib
 /bin
-certbot
+certbot*
 
 # Test binary, built with `go test -c`
 *.test
